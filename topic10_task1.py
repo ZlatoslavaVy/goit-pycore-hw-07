@@ -100,14 +100,16 @@ class AddressBook(UserDict):
                 continue
 
             born = record.birthday.value
-
-            candidate = born.replace(year=today.year)
+            try:
+                candidate = born.replace(year=today.year)
+            except ValueError:
+                candidate = born.replace(year=today.year, day=28)
 
             if candidate < today:
                 try:
                     candidate = born.replace(year=today.year + 1)
                 except ValueError:
-                    candidate = born.replace(year=today.year, day=28)
+                    candidate = born.replace(year=today.year + 1, day=28)
 
             delta = (candidate - today).days
 
