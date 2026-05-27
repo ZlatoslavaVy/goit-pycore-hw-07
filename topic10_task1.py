@@ -23,13 +23,18 @@ class Phone(Field):
         super().__init__(value)
 
 
-# class Birthday(Field):
-#     def __init__(self, value):
-#         try:
-#             # Додайте перевірку коректності даних
-#             # та перетворіть рядок на об'єкт datetime
-#         except ValueError:
-#             raise ValueError("Invalid date format. Use DD.MM.YYYY")
+class Birthday(Field):
+    def __init__(self, value):
+        try:
+            # Додайте перевірку коректності даних
+            # та перетворіть рядок на об'єкт datetime
+            string_to_object = datetime.strptime(value, "%d.%m.%Y").date()
+            super().__init__(string_to_object)
+        except ValueError:
+            raise ValueError("Invalid date format. Use DD.MM.YYYY")
+
+    def __str__(self):
+        return self.value.strftime("%d.%m.%Y")
 
 
 class Record:
@@ -52,8 +57,11 @@ class Record:
 
     def edit_phone(self, phone_number, new_phone):
         phone = self.find_phone(phone_number)
+        if phone is None:
+            raise ValueError("That phone number wasn't found!")
+        new_phone_obj = Phone(new_phone)
         index = self.phones.index(phone)
-        self.phones[index] = Phone(new_phone)
+        self.phones[index] = new_phone_obj
 
     def find_phone(self, value):
         for phone in self.phones:
@@ -61,8 +69,13 @@ class Record:
                 return phone
         return None
 
+    def add_birthday(self, birthday_day):
+        self.birthday = Birthday(birthday_day)
+
     def __str__(self):
-        return f"Contact name: {self.name.value}, phones: {'; '.join(p.value for p in self.phones)}"
+        # Додано відображення дня народження, якщо воно є
+        birthday_str = f", birthday: {self.birthday}" if self.birthday else ""
+        return f"Contact name: {self.name.value}, phones: {'; '.join(p.value for p in self.phones)}{birthday_str}"
 
 
 class AddressBook(UserDict):
@@ -83,13 +96,18 @@ class AddressBook(UserDict):
         result = []
 
         for record in self.data.values():
+            if record.birthday is None:
+                continue
 
-            born = datetime.strptime(record.name.value, "%Y.%m.%d").date()
+            born = record.birthday.value
 
             candidate = born.replace(year=today.year)
 
             if candidate < today:
-                candidate = born.replace(year=today.year + 1)
+                try:
+                    candidate = born.replace(year=today.year + 1)
+                except ValueError:
+                    candidate = born.replace(year=today.year, day=28)
 
             delta = (candidate - today).days
 
@@ -102,22 +120,12 @@ class AddressBook(UserDict):
 
                 result.append(
                     {
-                        "name": user["name"],
-                        "congratulation_date": candidate.strftime("%Y.%m.%d"),
+                        "name": record.name.value,
+                        "congratulation_date": candidate.strftime("%d.%m.%Y"),
                     }
                 )
 
-        result.sort(key=lambda x: x["congratulation_date"])
-
+        result.sort(
+            key=lambda x: datetime.strptime(x["congratulation_date"], "%d.%m.%Y")
+        )
         return result
-
-    users = [
-        {"name": "John Doe", "birthday": "1985.01.23"},
-        {"name": "Jane Smith", "birthday": "1990.01.27"},
-    ]
-
-    users.append({"name": "Kamelia Grossen", "birthday": "1995.10.27"})
-
-    upcoming_birthdays = get_upcoming_birthdays(users)
-
-    print("Список привітань на цьому тижні:", upcoming_birthdays)
