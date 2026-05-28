@@ -152,13 +152,21 @@ def input_error(func):
 
 # 4. Функції-обробники
 def parse_input(user_input):
-    cmd, *args = user_input.strip().lower().split()
+    parts = user_input.strip().split()
+
+    if not parts:  # Якщо ввели порожній рядок
+        return "", []
+
+    cmd = parts[0].lower()  # Команду робимо маленькими літерами
+    args = parts[1:]  # Аргументи (імена, телефони) залишаємо як є
+
     return cmd, args
 
 
 @input_error
 def add_birthday(args, book):
-    name, birthday = args
+    name = args[0]
+    birthday = args[1]
     record = book.find(name)  # ← як знайти контакт у книзі?
     if record is None:  # що робити якщо record == None?
         return "There is no record with that name!"
@@ -189,7 +197,10 @@ def birthdays(args, book):
 
 @input_error
 def add_contact(args, book: AddressBook):
-    name, phone, *_ = args
+    name = args[0]
+    # Беремо телефон тільки тоді, коли користувач його дійсно ввів
+    phone = args[1] if len(args) > 1 else None
+
     record = book.find(name)
     message = "Contact updated."
     if record is None:
@@ -203,7 +214,9 @@ def add_contact(args, book: AddressBook):
 
 @input_error
 def change_phone(args, book):
-    name, old_phone, new_phone = args
+    name = args[0]
+    old_phone = args[1]
+    new_phone = args[2]
     record = book.find(name)
     if record is None:
         return "Contact not found."
