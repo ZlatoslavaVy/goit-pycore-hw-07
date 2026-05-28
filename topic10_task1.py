@@ -1,7 +1,9 @@
+# 1. Імпорти
 from collections import UserDict
 from datetime import datetime, date, timedelta
 
 
+# 2. Класи (вже є з Кроку 1)
 class Field:
     def __init__(self, value):
         self.value = value
@@ -131,3 +133,139 @@ class AddressBook(UserDict):
             key=lambda x: datetime.strptime(x["congratulation_date"], "%d.%m.%Y")
         )
         return result
+
+
+# 3. Декоратор
+def input_error(func):
+    def inner(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except ValueError as e:
+            return str(e)
+        except KeyError as e:
+            return str(e)
+        except IndexError:
+            return "Not enough data!"
+
+    return inner
+
+
+# 4. Функції-обробники
+def parse_input(user_input):
+    cmd, *args = user_input.strip().lower().split()
+    return cmd, args
+
+
+@input_error
+def add_birthday(args, book):
+    name, birthday = args
+    record = book.find(name)  # ← як знайти контакт у книзі?
+    if record is None:  # що робити якщо record == None?
+        return "There is no record with that name!"
+    record.add_birthday(birthday)  # що робити якщо знайшли?
+    return "Birthday added."
+
+
+@input_error
+def show_birthday(args, book):
+    name = args[0]
+    record = book.find(name)
+    if record is None:
+        return "Contact not found."
+    if record.birthday is None:
+        return "Contact is without birthday."
+    return f"Birthday for {name}: {record.birthday}"
+
+
+@input_error
+def birthdays(args, book):
+    upcoming = book.get_upcoming_birthdays()
+    if not upcoming:
+        return "No birthdays found in this period."
+    return "\n".join(
+        f"{record['name']}: {record['congratulation_date']}" for record in upcoming
+    )
+
+
+@input_error
+def add_contact(args, book: AddressBook):
+    name, phone, *_ = args
+    record = book.find(name)
+    message = "Contact updated."
+    if record is None:
+        record = Record(name)
+        book.add_record(record)
+        message = "Contact added."
+    if phone:
+        record.add_phone(phone)
+    return message
+
+
+@input_error
+def change_phone(args, book):
+    name, old_phone, new_phone = args
+    record = book.find(name)
+    if record is None:
+        return "Contact not found."
+    record.edit_phone(old_phone, new_phone)
+    return "The phone number was changed."
+
+
+@input_error
+def show_phone(args, book):
+    name = args[0]
+    record = book.find(name)
+    if record is None:
+        return "Contact not found."
+    return "; ".join(phone.value for phone in record.phones)
+
+
+def show_all_contacts(book):
+    if not book.data:
+        return "There are no records."
+    return "\n".join(str(record) for record in book.data.values())
+
+
+# 5. Головна функція
+def main():
+    book = AddressBook()
+    print("Welcome to the assistant bot!")
+    while True:
+        user_input = input("Enter a command: ")
+        command, args = parse_input(user_input)
+
+        if command in ["close", "exit"]:
+            print("Good bye!")
+            break
+
+        elif command == "hello":
+            print("How can I help you?")
+
+        elif command == "add":
+            print(add_contact(args, book))
+
+        elif command == "change":
+            print(change_phone(args, book))
+
+        elif command == "phone":
+            print(show_phone(args, book))
+
+        elif command == "all":
+            print(show_all_contacts(book))
+
+        elif command == "add-birthday":
+            print(add_birthday(args, book))
+
+        elif command == "show-birthday":
+            print(show_birthday(args, book))
+
+        elif command == "birthdays":
+            print(birthdays(args, book))
+
+        else:
+            print("Invalid command.")
+
+
+# 6. Точка входу
+if __name__ == "__main__":
+    main()
